@@ -36,10 +36,12 @@ public:
 			addSpring(0, 1, 1.0);
 		}
 		else if (m_iSysCase == 1) {
+			m_fDamping = 10;
+
 			int edge_len = 10;
 			for (int i = 0; i < edge_len; i++)
 				for (int j = 0; j < edge_len; j++)
-					addMassPoint(Vec3(i, 0, j), Vec3(0, 0, 0), (i == 0 && j == 0) || (i == 0 && j == edge_len-1) || (i == edge_len-1 && j == 0) || (i == edge_len-1 && j == edge_len-1));
+					addMassPoint(Vec3(i, 4, j), Vec3(0, 0, 0), (i == 0 && j == 0) || (i == 0 && j == edge_len-1) || (i == edge_len-1 && j == 0) || (i == edge_len-1 && j == edge_len-1));
 
 			for (int i = 0; i < edge_len; i++)
 				for (int j = 0; j < edge_len; j++) {
@@ -140,6 +142,16 @@ public:
 	void externalForcesCalculations(float timeElapsed) {
 		return;
 	}
+	void checkGround(vector<Vec3>&pos, vector<Vec3>& vel, vector<Vec3>& force) {
+		float y = -1.0;
+		float penalty = 100;
+		for (int i = 0; i < pos.size(); i++) {
+			if (pos[i].y < y) {
+				float dep = y - pos[i].y;
+				force[i] += Vec3(0, penalty * dep, 0);
+			}
+		}
+	}
 	void simulateTimestep(float timeStep) {
 		//cout << "m_iTestCase = " << m_iTestCase << endl;
 		switch (m_iTestCase)
@@ -204,6 +216,9 @@ public:
 		return;
 	}
 	
+	float dot_prod(Vec3 a, Vec3 b) {
+		return a.x * b.x + a.y * b.y + a.z * b.z;
+	}
 	// simulation funcs
 	void AdvanceEuler(float h) {
 		Vec3 Gravity = Vec3(0., m_iSysCase * (-9.8), 0.);
@@ -218,8 +233,15 @@ public:
 			
 			MassPointForce[p] += f_pq;
 			MassPointForce[q] += -f_pq;
+			
 			// damping...
+			Vec3 v_pq = (MassPointVel[q] - MassPointVel[p]);
+			Vec3 d_pq = m_fDamping * dot_prod(v_pq, x_pq / norm(x_pq)) * x_pq / norm(x_pq);
+			MassPointForce[p] += d_pq;
+			MassPointForce[q] += -d_pq;
 		}
+
+		checkGround(MassPointPos, MassPointVel, MassPointForce);
 
 		// boundary conditions...
 		for (int i = 0; i < MassPointPos.size(); i++)
@@ -229,6 +251,7 @@ public:
 		for (int i = 0; i < MassPointVel.size(); i++)
 			if (!MassPointFix[i])
 				MassPointVel[i] += MassPointForce[i] * h / m_fMass;
+
 
 		if (m_iSysCase == 0 && fabs(h - 0.1) < 1e-4) {
 			cout << "====================================" << endl;
@@ -256,8 +279,15 @@ public:
 
 			MassPointForce[p] += f_pq;
 			MassPointForce[q] += -f_pq;
+			
 			// damping...
+			Vec3 v_pq = (MassPointVel[q] - MassPointVel[p]);
+			Vec3 d_pq = m_fDamping * dot_prod(v_pq, x_pq / norm(x_pq)) * x_pq / norm(x_pq);
+			MassPointForce[p] += d_pq;
+			MassPointForce[q] += -d_pq;
 		}
+
+		checkGround(MassPointPos, MassPointVel, MassPointForce);
 
 		// calc mid info - consider boundary conditions...
 		vector<Vec3>MidPos, MidVel, MidForce;
@@ -282,7 +312,14 @@ public:
 
 			MidForce[p] += f_pq;
 			MidForce[q] += -f_pq;
+
+			Vec3 v_pq = (MidVel[q] - MidVel[p]);
+			Vec3 d_pq = m_fDamping * dot_prod(v_pq, x_pq / norm(x_pq)) * x_pq / norm(x_pq);
+			MidForce[p] += d_pq;
+			MidForce[q] += -d_pq;
 		}
+
+		checkGround(MidPos, MidVel, MidForce);
 
 		// calc real info
 		for (int i = 0; i < MassPointPos.size(); i++)
