@@ -20,10 +20,12 @@ class Simulator{
 public:
 	// Attributes
 	int m_iTestCase;
+	int m_iSysCase;
 	DrawingUtilitiesClass * DUC;
 	// Functions
 	
 	virtual const char * getTestCasesStr() = 0;
+	virtual const char * getSysCasesStr() = 0;
 
 	virtual void reset() = 0;
 	
@@ -57,6 +59,7 @@ public:
 	**for more info on how to use this function take a look at the template simulator 
 	*/
 	virtual void notifyCaseChanged(int testCase) = 0;
+	virtual void notifySysCaseChanged(int sysCase) = 0;
 
 	/*
 	this function is used to receive the input from the mouse
